@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class BaseTableController extends Controller
 {
+  const TABLE_DIR = "App\\Http\\Controllers\\TableControllers\\";
+
   protected string $route_name = 'base_table';
   protected Request $request;
   protected $header;
@@ -318,10 +320,10 @@ class BaseTableController extends Controller
 
   // TODO: change to magick method
   private array $tables = array(
-    'currency'      => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCurrencyTableController",
-    'country'       => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCountryTableController",
-    'currency_rate' => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCurrencyRateTableController",
-    'place'         => "App\\Http\\Controllers\\TableControllers\\MrAdminPlaceTableController",
+    'currency'      => self::TABLE_DIR . "Reference\\MrReferenceCurrencyTableController",
+    'country'       => self::TABLE_DIR . "Reference\\MrReferenceCountryTableController",
+    'currency_rate' => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
+    'place'         => self::TABLE_DIR . "MrAdminPlaceTableController",
   );
 
   /**
@@ -352,8 +354,6 @@ class BaseTableController extends Controller
    */
   public function getTableClass(Request $request): array
   {
-    $base_dir = "App\\Http\\Controllers\\TableControllers\\";
-
     foreach($request->all() as $key => $item)
     {
       if(strpos($key, 'TableController'))
@@ -361,9 +361,9 @@ class BaseTableController extends Controller
         $object = null;
         foreach($this->getLocalDirs() as $has_dir)
         {
-          if(class_exists($base_dir . $has_dir . '\\' . $key, true))
+          if(class_exists(self::TABLE_DIR . $has_dir . '\\' . $key, true))
           {
-            $object = $base_dir . $has_dir . '\\' . $key;
+            $object = self::TABLE_DIR . $has_dir . '\\' . $key;
             break;
           }
         }

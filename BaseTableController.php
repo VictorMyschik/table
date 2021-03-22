@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\TableControllers\BaseTableController;
 
+use App\Helpers\MrCacheHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -324,6 +325,26 @@ class BaseTableController extends Controller
   );
 
   /**
+   * Cached dir tables
+   *
+   * @return array
+   */
+  private function getLocalDirs(): array
+  {
+    return MrCacheHelper::GetCachedData('LocalDirs_TableControllers', function() {
+      $dir_list = scandir(__DIR__ . '/../');
+      $unset = array('.', '..', 'BaseTableController');
+
+      foreach($unset as $e)
+      {
+        unset($dir_list[array_search($e, $dir_list)]);
+      }
+
+      return $dir_list;
+    });
+  }
+
+  /**
    * Определение нужной таблицы по внешнему запросу
    *
    * @param Request $request
@@ -333,20 +354,12 @@ class BaseTableController extends Controller
   {
     $base_dir = "App\\Http\\Controllers\\TableControllers\\";
 
-    $dir_list = scandir(__DIR__ . '/../');
-    $unset = array('.', '..', 'BaseTableController');
-
-    foreach($unset as $e)
-    {
-      unset($dir_list[array_search($e, $dir_list)]);
-    }
-
     foreach($request->all() as $key => $item)
     {
       if(strpos($key, 'TableController'))
       {
         $object = null;
-        foreach($dir_list as $has_dir)
+        foreach($this->getLocalDirs() as $has_dir)
         {
           if(class_exists($base_dir . $has_dir . '\\' . $key, true))
           {

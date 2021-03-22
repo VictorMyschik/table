@@ -82,13 +82,7 @@ class BaseTableController extends Controller
 
     $page_number = $this->request->get('page', 1);
 
-    $data = $this->GetTableRequest($args)
-      ->paginate(
-        self::colInPage($this->filter_args),
-        ['id'],
-        'page',
-        $page_number
-      );
+    $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filter_args), ['id'], 'page', $page_number);
 
     // Table header
     $header = $this::getHeader();
@@ -281,7 +275,7 @@ class BaseTableController extends Controller
   }
 
   /**
-   * Возвращает массив данных объекта для FrontEnd разработчиков
+   * Return response for REST API (draft)
    *
    * @return array
    */
@@ -321,6 +315,7 @@ class BaseTableController extends Controller
     return $query;
   }
 
+  // TODO: change to magick method
   private array $tables = array(
     'currency'      => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCurrencyTableController",
     'country'       => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCountryTableController",
@@ -336,30 +331,28 @@ class BaseTableController extends Controller
    */
   public function getTableClass(Request $request): array
   {
+    $base_dir = "App\\Http\\Controllers\\TableControllers\\";
+
+    $dir_list = scandir(__DIR__ . '/../');
+    $unset = array('.', '..', 'BaseTableController');
+
+    foreach($unset as $e)
+    {
+      unset($dir_list[array_search($e, $dir_list)]);
+    }
+
     foreach($request->all() as $key => $item)
     {
       if(strpos($key, 'TableController'))
       {
         $object = null;
-        if(class_exists("App\\Http\\Controllers\\TableControllers\\Admin\\" . $key, true))
+        foreach($dir_list as $has_dir)
         {
-          $object = "App\\Http\\Controllers\\TableControllers\\Admin\\" . $key;
-        }
-        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\System\\" . $key, true))
-        {
-          $object = "App\\Http\\Controllers\\TableControllers\\System\\" . $key;
-        }
-        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\Admin\\Reports\\" . $key, true))
-        {
-          $object = "App\\Http\\Controllers\\TableControllers\\Admin\\Reports\\" . $key;
-        }
-        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\Reference\\" . $key, true))
-        {
-          $object = "App\\Http\\Controllers\\TableControllers\\Reference\\" . $key;
-        }
-        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\" . $key, true))
-        {
-          $object = "App\\Http\\Controllers\\TableControllers\\" . $key;
+          if(class_exists($base_dir . $has_dir . '\\' . $key, true))
+          {
+            $object = $base_dir . $has_dir . '\\' . $key;
+            break;
+          }
         }
 
         if($object)
@@ -371,7 +364,7 @@ class BaseTableController extends Controller
       }
     }
 
-    /// Новая версия
+    /// Draft version for REST API app
     $v = $request->all();
 
     if($v['table'] ?? null)

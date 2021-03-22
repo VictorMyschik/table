@@ -1,2 +1,399 @@
-test
-dwdwq;ldmlwqkdnlkwqdwq
+<?php
+
+namespace App\Http\Controllers\TableControllers\BaseTableController;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Http\Request;
+
+class BaseTableController extends Controller
+{
+  protected string $route_name = 'base_table';
+  protected Request $request;
+  protected $header;
+  protected $body;
+  protected int $count = 0;
+  protected $btn_selected;
+  protected $result;
+  protected bool $is_checkboxes = false;
+  protected string $route_url;
+  protected $form;
+  protected array $filter_args;
+  protected static bool $isFrontEnd = false;
+  private array $rows;
+  private array $front_rows;
+
+
+  private static bool $debug = false;
+
+  public function __construct(Request $request, bool $show_start = true)
+  {
+    $this->show_start = $show_start;
+    $this->request = $request;
+    $arr = explode('\\', static::class);
+    $arr = array_pop($arr);
+
+    $param = '?' . $arr . '&';
+    foreach($this->request->all() as $key => $value)
+    {
+      $param .= $key . '=' . $value;
+    }
+
+    $this->route_url = route($this->route_name) . $param;
+
+    // Table filter
+    $this->filter_args = self::GetFilterArgs();
+    if(method_exists($this, 'getFilter'))
+    {
+      $this->form = $this->getFilter($this->filter_args);
+    }
+
+    return $request->all();
+  }
+
+  public function returnInputData(): array
+  {
+    return $this->request->all();
+  }
+
+
+  /**
+   * @param array $args передаваемые аргументы для запроса в БД
+   *
+   * @return self
+   */
+  public function buildTable(array $args = array())
+  {
+    // Checkboxes Selected
+    $result = '';
+    if($method_name_for_selected = $this->request->get('method'))
+    {
+      $result = $this->$method_name_for_selected($this->request->get('selected'));
+
+      return $result;
+    }
+
+    // Btn Selected
+    $btn_selected = array();
+    if(method_exists($this, 'Selected'))
+    {
+      $btn_selected = $this->Selected();
+    }
+
+    $page_number = $this->request->get('page', 1);
+
+    $data = $this->GetTableRequest($args)
+      ->paginate(
+        self::colInPage($this->filter_args),
+        ['id'],
+        'page',
+        $page_number
+      );
+
+    // Table header
+    $header = $this::getHeader();
+    $is_checkboxes = false;
+    if(count($header))
+    {
+      foreach($header as $head_arr)
+      {
+        if(isset($head_arr['name']) && $head_arr['name'] == '#checkbox')
+        {
+          $is_checkboxes = true;
+        }
+      }
+    }
+
+    $this->header = $header;
+
+    $collections = $data->getCollection();
+
+    $this->rows = array();
+
+    foreach($collections as $key => $model)
+    {
+      $id = $model->id;
+
+      $this->rows[] = $row = $this->buildRow($id, $args);
+
+      $this->front_rows[] = $this->convertToApi($row);
+
+      $data->setCollection(collect($this->rows));
+    }
+
+    $this->body = $data ?? null;
+    $this->count = $data->total();
+
+
+    $this->btn_selected = $btn_selected;
+    $this->result = $result;
+    $this->is_checkboxes = $is_checkboxes;
+    $this->form = $filter ?? null;
+
+    if(self::$debug)
+    {
+      dd($this);
+    }
+
+    return $this;
+  }
+
+  private function convertToApi(array $row): array
+  {
+    $out = array();
+
+    foreach($row as $key => $item)
+    {
+      $out[$this->header[$key]['name']] = $item;
+    }
+
+    return $out;
+  }
+
+  /**
+   * Table arguments
+   *
+   * @return array
+   */
+  protected static function GetFilterArgs(): array
+  {
+    $url_args = array();
+
+    foreach(explode('&', request()->getQueryString()) as $item)
+    {
+      if($item == 'debug=')
+      {
+        self::$debug = true;
+      }
+
+      $param = explode('=', $item);
+      if(count($param))
+      {
+        if(isset($param[1]))
+        {
+          $url_args[$param[0]] = urldecode($param[1]);
+        }
+      }
+    }
+
+    return $url_args;
+  }
+
+  /**
+   * Определение типа и направление сортировки.
+   * Сортировка только по полям, которые есть в модели, остальные игнорируются
+   *
+   * @param $query
+   */
+  public static function TableSort(&$query)
+  {
+    $field_name = 'id';
+    // Base parametrise
+    $sort = 'asc';
+
+    foreach(explode('&', request()->getQueryString()) as $item)
+    {
+      if(!$item)
+      {
+        continue;
+      }
+
+      $param = explode('=', $item);
+      $key = $param[0];
+      $value = $param[1];
+
+      if($key == 'sort' && ($value == 'asc' || $value == 'desc'))
+      {
+        $sort = $value;
+      }
+      elseif($key == 'field' && $value)
+      {
+        $field_name = $value;
+      }
+    }
+
+    $query->orderBy($field_name, $sort);
+  }
+
+  /**
+   * Количество строк на странице
+   *
+   * @param array $filter
+   * @return int
+   */
+  protected static function colInPage(array $filter): int
+  {
+    $cnt = 15;
+    if(isset($filter['per_page']) && (int)$filter['per_page'])
+    {
+      $cnt = $filter['per_page'];
+    }
+
+    return $cnt;
+  }
+
+  /**
+   * Рендерит таблицу с фильтром
+   *
+   * @return array|string
+   */
+  public function render()
+  {
+    $out = array(
+      'form'      => $this->form,
+      'route_url' => $this->route_url,
+      'mr_object' => array(),
+    );
+
+    if($this->body)
+    {
+      $out['mr_object'] = array(
+        'header'        => $this->header,
+        'body'          => $this->body,
+        'count'         => $this->count,
+        'btn_selected'  => $this->btn_selected,
+        'result'        => $this->result,
+        'is_checkboxes' => $this->is_checkboxes,
+        'route_url'     => $this->route_url,
+      );
+    }
+
+    return View('layouts.Elements.mr_table')->with($out)->toHtml();
+  }
+
+  /**
+   * Возвращает массив данных объекта
+   *
+   * @return array
+   */
+  public function getTableData(): array
+  {
+    return array(
+      'header'        => $this->header,
+      'body'          => $this->body,
+      'count'         => $this->count,
+      'btn_selected'  => $this->btn_selected,
+      'result'        => $this->result,
+      'is_checkboxes' => $this->is_checkboxes,
+      'route_url'     => $this->route_url,
+      'form'          => $this->form,
+    );
+  }
+
+  /**
+   * Возвращает массив данных объекта для FrontEnd разработчиков
+   *
+   * @return array
+   */
+  public function getFrontEndData(): array
+  {
+    $out = array(
+      'header'       => $this->header,
+      'total'        => $this->body->total(),
+      'rows'         => $this->front_rows,
+      'current_page' => $this->body->currentPage(),
+      'last_page'    => $this->body->lastPage(),
+      'per_page'     => $this->body->perPage(),
+    );
+
+    if($this->form)
+    {
+      $out['form'] = $this->form;
+    }
+
+    return $out;
+  }
+
+  /**
+   * Вернёт SQL запрос для построения таблицы
+   *
+   * @param array $args
+   * @return Builder
+   */
+  public function GetTableRequest(array $args = array()): Builder
+  {
+    $args += $this->request->all();
+
+    /** @var Builder $query */
+    $query = $this->GetQuery($this->filter_args, $args);
+    self::TableSort($query);
+
+    return $query;
+  }
+
+  private array $tables = array(
+    'currency'      => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCurrencyTableController",
+    'country'       => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCountryTableController",
+    'currency_rate' => "App\\Http\\Controllers\\TableControllers\\Reference\\MrReferenceCurrencyRateTableController",
+    'place'         => "App\\Http\\Controllers\\TableControllers\\MrAdminPlaceTableController",
+  );
+
+  /**
+   * Определение нужной таблицы по внешнему запросу
+   *
+   * @param Request $request
+   * @return array
+   */
+  public function getTableClass(Request $request): array
+  {
+    foreach($request->all() as $key => $item)
+    {
+      if(strpos($key, 'TableController'))
+      {
+        $object = null;
+        if(class_exists("App\\Http\\Controllers\\TableControllers\\Admin\\" . $key, true))
+        {
+          $object = "App\\Http\\Controllers\\TableControllers\\Admin\\" . $key;
+        }
+        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\System\\" . $key, true))
+        {
+          $object = "App\\Http\\Controllers\\TableControllers\\System\\" . $key;
+        }
+        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\Admin\\Reports\\" . $key, true))
+        {
+          $object = "App\\Http\\Controllers\\TableControllers\\Admin\\Reports\\" . $key;
+        }
+        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\Reference\\" . $key, true))
+        {
+          $object = "App\\Http\\Controllers\\TableControllers\\Reference\\" . $key;
+        }
+        elseif(class_exists("App\\Http\\Controllers\\TableControllers\\" . $key, true))
+        {
+          $object = "App\\Http\\Controllers\\TableControllers\\" . $key;
+        }
+
+        if($object)
+        {
+          $r = new $object($request);
+
+          return $r->buildTable()->getTableData();
+        }
+      }
+    }
+
+    /// Новая версия
+    $v = $request->all();
+
+    if($v['table'] ?? null)
+    {
+      self::$isFrontEnd = true;
+
+      if($this->tables[$v['table']] ?? null)
+      {
+        $object = $this->tables[$v['table']];
+
+        $r = new $object($request);
+
+        return $r->buildTable()->getFrontEndData();
+      }
+    }
+
+
+    return ['Table not found'];
+  }
+
+  public function getForm()
+  {
+    return $this->form;
+  }
+}

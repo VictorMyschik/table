@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\TableControllers\BaseTableController;
 
-use App\Helpers\MrCacheHelper;
+use App\Helpers\System\MrCacheHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;

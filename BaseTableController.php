@@ -65,15 +65,13 @@ class BaseTableController extends Controller
    *
    * @return self
    */
-  public function buildTable(array $args = array())
+  public function buildTable(array $args = array()): BaseTableController
   {
     // Checkboxes Selected
     $result = '';
     if($method_name_for_selected = $this->request->get('method'))
     {
-      $result = $this->$method_name_for_selected($this->request->get('selected'));
-
-      return $result;
+      return $this->$method_name_for_selected($this->request->get('selected'));
     }
 
     // Btn Selected

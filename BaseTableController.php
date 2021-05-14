@@ -113,7 +113,7 @@ class BaseTableController extends Controller
 
       if(self::$isFrontEnd)
       {
-         $this->front_rows[] = $this->convertToApi($row);
+        $this->front_rows[] = $this->convertToApi($row);
       }
 
       $data->setCollection(collect($this->rows));

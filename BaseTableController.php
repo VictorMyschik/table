@@ -12,7 +12,7 @@ class BaseTableController extends Controller
   const TABLE_DIR = "App\\Http\\Controllers\\TableControllers\\";
 
   protected string $route_name = 'base_table';
-  protected Request $request;
+  protected array $request;
   protected $header;
   protected $body;
   protected int $count = 0;
@@ -29,15 +29,15 @@ class BaseTableController extends Controller
 
   private static bool $debug = false;
 
-  public function __construct(Request $request, bool $show_start = true)
+  public function __construct(array $request, bool $show_start = true)
   {
-    $this->show_start = $show_start;
     $this->request = $request;
+    $this->show_start = $show_start;
     $arr = explode('\\', static::class);
     $arr = array_pop($arr);
 
     $param = '?' . $arr . '&';
-    foreach($this->request->all() as $key => $value)
+    foreach($this->request as $key => $value)
     {
       $param .= $key . '=' . $value;
     }
@@ -51,12 +51,12 @@ class BaseTableController extends Controller
       $this->form = $this->getFilter($this->filter_args);
     }
 
-    return $request->all();
+    return $request;
   }
 
   public function returnInputData(): array
   {
-    return $this->request->all();
+    return $this->request;
   }
 
 
@@ -69,9 +69,11 @@ class BaseTableController extends Controller
   {
     // Checkboxes Selected
     $result = '';
-    if($method_name_for_selected = $this->request->get('method'))
+    if(isset($this->request['method']))
     {
-      return $this->$method_name_for_selected($this->request->get('selected'));
+      $method_name_for_selected = $this->request['method'];
+
+      return $this->$method_name_for_selected($this->request['selected']);
     }
 
     // Btn Selected
@@ -81,7 +83,7 @@ class BaseTableController extends Controller
       $btn_selected = $this->Selected();
     }
 
-    $page_number = $this->request->get('page', 1);
+    $page_number = $this->request['page'] ?? 1;
 
     $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filter_args), ['id'], 'page', $page_number);
 
@@ -308,9 +310,9 @@ class BaseTableController extends Controller
    * @param array $args
    * @return Builder
    */
-  public function GetTableRequest(array $args = array()): Builder
+  public function GetTableRequest(array $args = array())
   {
-    $args += $this->request->all();
+    $args += $this->request;
 
     /** @var Builder $query */
     $query = $this->GetQuery($this->filter_args, $args);
@@ -355,7 +357,7 @@ class BaseTableController extends Controller
    */
   public function getTableClass(Request $request): array
   {
-    foreach($request->all() as $key => $item)
+    foreach($request as $key => $item)
     {
       if(strpos($key, 'TableController'))
       {
@@ -379,7 +381,7 @@ class BaseTableController extends Controller
     }
 
     /// Draft version for REST API app
-    $v = $request->all();
+    $v = $request;
 
     if($v['table'] ?? null)
     {

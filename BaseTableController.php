@@ -66,9 +66,9 @@ class BaseTableController extends Controller
   {
     // Checkboxes Selected
     $result = '';
-    if(isset($this->request['method']))
+    if(isset(request()['method']))
     {
-      $method_name_for_selected = $this->request['method'];
+      $method_name_for_selected = request()['method'];
 
       return $this->$method_name_for_selected($this->request['selected']);
     }

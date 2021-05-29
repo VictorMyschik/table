@@ -5,7 +5,6 @@ namespace App\Http\Controllers\TableControllers\BaseTableController;
 use App\Helpers\System\MrCacheHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Http\Request;
 
 class BaseTableController extends Controller
 {
@@ -29,9 +28,9 @@ class BaseTableController extends Controller
 
   private static bool $debug = false;
 
-  public function __construct(array $request, bool $show_start = true)
+  public function __construct(bool $show_start = true)
   {
-    $this->request = $request;
+    $this->request = request()->all();
     $this->show_start = $show_start;
     $arr = explode('\\', static::class);
     $arr = array_pop($arr);
@@ -50,8 +49,6 @@ class BaseTableController extends Controller
     {
       $this->form = $this->getFilter($this->filter_args);
     }
-
-    return $request;
   }
 
   public function returnInputData(): array
@@ -65,7 +62,7 @@ class BaseTableController extends Controller
    *
    * @return self
    */
-  public function buildTable(array $args = array()): BaseTableController
+  public function buildTable(array $args = array())
   {
     // Checkboxes Selected
     $result = '';
@@ -352,12 +349,11 @@ class BaseTableController extends Controller
   /**
    * Определение нужной таблицы по внешнему запросу
    *
-   * @param Request $request
    * @return array
    */
-  public function getTableClass(Request $request): array
+  public function getTableClass(): array
   {
-    foreach($request as $key => $item)
+    foreach($this->request as $key => $item)
     {
       if(strpos($key, 'TableController'))
       {
@@ -373,7 +369,7 @@ class BaseTableController extends Controller
 
         if($object)
         {
-          $r = new $object($request);
+          $r = new $object();
 
           return $r->buildTable()->getTableData();
         }
@@ -381,17 +377,15 @@ class BaseTableController extends Controller
     }
 
     /// Draft version for REST API app
-    $v = $request;
-
     if($v['table'] ?? null)
     {
       self::$isFrontEnd = true;
 
-      if($this->tables[$v['table']] ?? null)
+      if($this->tables[$this->request['table']] ?? null)
       {
-        $object = $this->tables[$v['table']];
+        $object = $this->tables[$this->request['table']];
 
-        $r = new $object($request);
+        $r = new $object();
 
         return $r->buildTable()->getFrontEndData();
       }

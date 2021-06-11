@@ -358,7 +358,8 @@ class BaseTableController extends Controller
       if(strpos($key, 'TableController'))
       {
         $object = null;
-        foreach($this->getLocalDirs() as $has_dir)
+        $localDirs = $this->getLocalDirs();
+        foreach($localDirs as $has_dir)
         {
           if(class_exists(self::TABLE_DIR . $has_dir . '\\' . $key, true))
           {

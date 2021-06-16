@@ -324,6 +324,7 @@ class BaseTableController extends Controller
     'country'       => self::TABLE_DIR . "Reference\\MrReferenceCountryTableController",
     'currency_rate' => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
     'place'         => self::TABLE_DIR . "MrAdminPlaceTableController",
+    'price'         => self::TABLE_DIR . "Office\\MrPriceTableController",
   );
 
   /**
@@ -378,7 +379,7 @@ class BaseTableController extends Controller
     }
 
     /// Draft version for REST API app
-    if($v['table'] ?? null)
+    if($this->request['table'] ?? null)
     {
       self::$isFrontEnd = true;
 
@@ -387,7 +388,7 @@ class BaseTableController extends Controller
         $object = $this->tables[$this->request['table']];
 
         $r = new $object();
-
+dd($this->request['table']);
         return $r->buildTable()->getFrontEndData();
       }
     }

@@ -23,7 +23,7 @@ class BaseTableController extends Controller
   protected array $filter_args;
   protected static bool $isFrontEnd = false;
   private array $rows;
-  private array $front_rows;
+  private array $front_rows = [];
 
 
   private static bool $debug = false;
@@ -320,11 +320,12 @@ class BaseTableController extends Controller
 
   // TODO: change to magick method
   private array $tables = array(
-    'currency'      => self::TABLE_DIR . "Reference\\MrReferenceCurrencyTableController",
-    'country'       => self::TABLE_DIR . "Reference\\MrReferenceCountryTableController",
-    'currency_rate' => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
-    'place'         => self::TABLE_DIR . "MrAdminPlaceTableController",
-    'price'         => self::TABLE_DIR . "Office\\MrPriceTableController",
+    'currency'             => self::TABLE_DIR . "Reference\\MrReferenceCurrencyTableController",
+    'country'              => self::TABLE_DIR . "Reference\\MrReferenceCountryTableController",
+    'currency_rate'        => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
+    'place'                => self::TABLE_DIR . "MrAdminPlaceTableController",
+    'price'                => self::TABLE_DIR . "Office\\MrPriceTableController",
+    'marketplaceGoodPrice' => self::TABLE_DIR . "Office\\MrMarketplaceGoodPriceTableController",
   );
 
   /**
@@ -388,7 +389,7 @@ class BaseTableController extends Controller
         $object = $this->tables[$this->request['table']];
 
         $r = new $object();
-dd($this->request['table']);
+
         return $r->buildTable()->getFrontEndData();
       }
     }

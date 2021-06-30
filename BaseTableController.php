@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\TableControllers\BaseTableController;
 
 use App\Helpers\System\MrCacheHelper;
+use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Query\Builder;
 
@@ -112,7 +113,7 @@ class BaseTableController extends Controller
 
       if(self::$isFrontEnd)
       {
-        $this->front_rows[] = $this->convertToApi($row);
+        $this->front_rows[] = $row;
       }
 
       $data->setCollection(collect($this->rows));
@@ -137,14 +138,15 @@ class BaseTableController extends Controller
 
   private function convertToApi(array $row): array
   {
-    $out = array();
+    $newRow = array();
 
     foreach($row as $key => $item)
     {
-      $out[$this->header[$key]['name']] = $item;
+      dd($row);
+      $newRow[$this->header[$key]['name']] = $item;
     }
 
-    return $out;
+    return $newRow;
   }
 
   /**
@@ -287,7 +289,8 @@ class BaseTableController extends Controller
     $out = array(
       'header'       => $this->header,
       'total'        => $this->body->total(),
-      'rows'         => $this->front_rows,
+      'totalDisplay' => MtFloatHelper::formatCommon($this->body->total(), 0),
+      'data'         => $this->front_rows,
       'current_page' => $this->body->currentPage(),
       'last_page'    => $this->body->lastPage(),
       'per_page'     => $this->body->perPage(),
@@ -326,6 +329,7 @@ class BaseTableController extends Controller
     'place'                => self::TABLE_DIR . "MrAdminPlaceTableController",
     'price'                => self::TABLE_DIR . "Office\\MrPriceTableController",
     'marketplaceGoodPrice' => self::TABLE_DIR . "Office\\MrMarketplaceGoodPriceTableController",
+    'officeGoods'          => self::TABLE_DIR . "Office\\MrOfficeGoodTableController",
   );
 
   /**

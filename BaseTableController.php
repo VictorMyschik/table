@@ -6,6 +6,7 @@ use App\Helpers\System\MrCacheHelper;
 use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 class BaseTableController extends Controller
 {
@@ -84,7 +85,6 @@ class BaseTableController extends Controller
     $page_number = $this->request['page'] ?? 1;
 
     $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filter_args), ['id'], 'page', $page_number);
-
     // Table header
     $header = $this::getHeader();
     $is_checkboxes = false;
@@ -201,11 +201,14 @@ class BaseTableController extends Controller
       $key = $param[0];
       $value = $param[1];
 
-      if($key == 'sort' && ($value == 'asc' || $value == 'desc'))
+      abort_if(preg_match("/[^A-Za-z0-9._]/", $key), 403);
+      abort_if(preg_match("/[^A-Za-z0-9._]/", $value), 403);
+
+      if($key == 'sort' && ($value === 'asc' || $value === 'desc'))
       {
         $sort = $value;
       }
-      elseif($key == 'field' && $value)
+      elseif($key === 'field' && $value)
       {
         $field_name = $value;
       }
@@ -225,7 +228,7 @@ class BaseTableController extends Controller
     $cnt = 15;
     if(isset($filter['per_page']) && (int)$filter['per_page'])
     {
-      $cnt = $filter['per_page'];
+      $cnt = (int)$filter['per_page'];
     }
 
     return $cnt;
@@ -310,7 +313,7 @@ class BaseTableController extends Controller
    * @param array $args
    * @return Builder
    */
-  public function GetTableRequest(array $args = array())
+  public function GetTableRequest(array $args = array()): Builder
   {
     $args += $this->request;
 

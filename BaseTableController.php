@@ -331,7 +331,7 @@ class BaseTableController extends Controller
     'currency_rate'        => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
     'place'                => self::TABLE_DIR . "MrAdminPlaceTableController",
     'price'                => self::TABLE_DIR . "Office\\MrPriceTableController",
-    'marketplaceGoodPrice' => self::TABLE_DIR . "Office\\MrMarketplaceGoodPriceTableController",
+    'marketplaceGoodPrice' => self::TABLE_DIR . "Office\\MrMarketplaceGoodTableController",
     'officeGoods'          => self::TABLE_DIR . "Office\\MrOfficeGoodTableController",
   );
 

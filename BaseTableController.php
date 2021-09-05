@@ -5,8 +5,7 @@ namespace App\Http\Controllers\TableControllers\BaseTableController;
 use App\Helpers\System\MrCacheHelper;
 use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
 
 class BaseTableController extends Controller
 {
@@ -201,9 +200,6 @@ class BaseTableController extends Controller
       $key = $param[0];
       $value = $param[1];
 
-      abort_if(preg_match("/[^A-Za-z0-9._]/", $key), 403);
-      abort_if(preg_match("/[^A-Za-z0-9._]/", $value), 403);
-
       if($key == 'sort' && ($value === 'asc' || $value === 'desc'))
       {
         $sort = $value;
@@ -313,7 +309,7 @@ class BaseTableController extends Controller
    * @param array $args
    * @return Builder
    */
-  public function GetTableRequest(array $args = array()): Builder
+  public function GetTableRequest(array $args = array())
   {
     $args += $this->request;
 

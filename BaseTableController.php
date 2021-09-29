@@ -59,7 +59,7 @@ class BaseTableController extends Controller
 
 
   /**
-   * @param array $args передаваемые аргументы для запроса в БД
+   * @param array $args Передаваемые аргументы для запроса в БД
    *
    * @return self
    */
@@ -183,7 +183,7 @@ class BaseTableController extends Controller
    *
    * @param $query
    */
-  public static function TableSort(&$query)
+  private function tableSort(&$query)
   {
     $field_name = 'id';
     // Base parametrise
@@ -309,13 +309,13 @@ class BaseTableController extends Controller
    * @param array $args
    * @return Builder
    */
-  public function GetTableRequest(array $args = array())
+  public function getTableRequest(array $args = array())
   {
     $args += $this->request;
 
     /** @var Builder $query */
     $query = $this->GetQuery($this->filter_args, $args);
-    self::TableSort($query);
+    $this->tableSort($query);
 
     return $query;
   }

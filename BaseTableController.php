@@ -91,7 +91,7 @@ class BaseTableController extends Controller
     {
       foreach($header as $head_arr)
       {
-        if(isset($head_arr['name']) && $head_arr['name'] == '#checkbox')
+        if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox')
         {
           $is_checkboxes = true;
         }
@@ -159,7 +159,7 @@ class BaseTableController extends Controller
 
     foreach(explode('&', request()->getQueryString()) as $item)
     {
-      if($item == 'debug=')
+      if($item === 'debug=')
       {
         self::$debug = true;
       }
@@ -200,7 +200,7 @@ class BaseTableController extends Controller
       $key = $param[0];
       $value = $param[1];
 
-      if($key == 'sort' && ($value === 'asc' || $value === 'desc'))
+      if($key === 'sort' && ($value === 'asc' || $value === 'desc'))
       {
         $sort = $value;
       }

@@ -209,7 +209,6 @@ class BaseTableController extends Controller
         $field_name = $value;
       }
     }
-
     $query->orderBy($field_name, $sort);
   }
 

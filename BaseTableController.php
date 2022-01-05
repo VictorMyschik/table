@@ -337,7 +337,7 @@ class BaseTableController extends Controller
    */
   private function getLocalDirs(): array
   {
-    return MrCacheHelper::GetCachedData('LocalDirs_TableControllers', function() {
+    return MrCacheHelper::getCachedData('LocalDirs_TableControllers', function() {
       $dir_list = scandir(__DIR__ . '/../');
       $unset = array('.', '..', 'BaseTableController');
 

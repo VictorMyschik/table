@@ -5,50 +5,49 @@ namespace App\Http\Controllers\TableControllers\BaseTableController;
 use App\Helpers\System\MrCacheHelper;
 use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder;
+use JetBrains\PhpStorm\ArrayShape;
 
 class BaseTableController extends Controller
 {
   const TABLE_DIR = "App\\Http\\Controllers\\TableControllers\\";
 
-  protected string $route_name = 'base_table';
+  protected string $routeName = 'base_table';
   protected array $request;
   protected $header;
   protected $body;
   protected int $count = 0;
-  protected $btn_selected;
+  protected $btnSelected;
   protected $result;
-  protected bool $is_checkboxes = false;
+  protected bool $isCheckboxes = false;
   protected string $route_url;
   protected $form;
-  protected array $filter_args;
+  protected array $filterArgs;
   protected static bool $isFrontEnd = false;
   private array $rows;
-  private array $front_rows = [];
+  private array $frontRows = [];
 
 
   private static bool $debug = false;
 
-  public function __construct(bool $show_start = true)
+  public function __construct(bool $showStart = true)
   {
     $this->request = request()->all();
-    $this->show_start = $show_start;
+    $this->show_start = $showStart;
     $arr = explode('\\', static::class);
     $arr = array_pop($arr);
 
     $param = '?' . $arr . '&';
-    foreach($this->request as $key => $value)
-    {
+    foreach($this->request as $key => $value) {
       $param .= $key . '=' . $value;
     }
 
-    $this->route_url = route($this->route_name) . $param;
+    $this->route_url = route($this->routeName) . $param;
 
     // Table filter
-    $this->filter_args = self::GetFilterArgs();
-    if(method_exists($this, 'getFilter'))
-    {
-      $this->form = $this->getFilter($this->filter_args);
+    $this->filterArgs = self::GetFilterArgs();
+    if(method_exists($this, 'getFilter')) {
+      $this->form = $this->getFilter($this->filterArgs);
     }
   }
 
@@ -57,43 +56,32 @@ class BaseTableController extends Controller
     return $this->request;
   }
 
-
-  /**
-   * @param array $args Передаваемые аргументы для запроса в БД
-   *
-   * @return self
-   */
-  public function buildTable(array $args = array())
+  public function buildTable(array $args = array()): static
   {
     // Checkboxes Selected
     $result = '';
-    if(isset(request()['method']))
-    {
-      $method_name_for_selected = request()['method'];
+    if(isset(request()['method'])) {
+      $methodNameForSelected = request()['method'];
 
-      return $this->$method_name_for_selected($this->request['selected']);
+      return $this->$methodNameForSelected($this->request['selected']);
     }
 
     // Btn Selected
-    $btn_selected = array();
-    if(method_exists($this, 'Selected'))
-    {
-      $btn_selected = $this->Selected();
+    $this->btnSelected = array();
+    if(method_exists($this, 'Selected')) {
+      $this->btnSelected = $this->Selected();
     }
 
-    $page_number = $this->request['page'] ?? 1;
+    $pageNumber = $this->request['page'] ?? 1;
 
-    $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filter_args), ['id'], 'page', $page_number);
+    $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filterArgs), ['id'], 'page', $pageNumber);
     // Table header
     $header = $this::getHeader();
-    $is_checkboxes = false;
-    if(count($header))
-    {
-      foreach($header as $head_arr)
-      {
-        if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox')
-        {
-          $is_checkboxes = true;
+    $this->isCheckboxes = false;
+    if(count($header)) {
+      foreach($header as $head_arr) {
+        if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox') {
+          $this->isCheckboxes = true;
         }
       }
     }
@@ -104,15 +92,11 @@ class BaseTableController extends Controller
 
     $this->rows = array();
 
-    foreach($collections as $key => $model)
-    {
-      $id = $model->id;
+    foreach($collections as $model) {
+      $this->rows[] = $row = $this->buildRow($model->id, $args);
 
-      $this->rows[] = $row = $this->buildRow($id, $args);
-
-      if(self::$isFrontEnd)
-      {
-        $this->front_rows[] = $row;
+      if(self::$isFrontEnd) {
+        $this->frontRows[] = $row;
       }
 
       $data->setCollection(collect($this->rows));
@@ -122,13 +106,10 @@ class BaseTableController extends Controller
     $this->count = $data->total();
 
 
-    $this->btn_selected = $btn_selected;
     $this->result = $result;
-    $this->is_checkboxes = $is_checkboxes;
     $this->form = $filter ?? null;
 
-    if(self::$debug)
-    {
+    if(self::$debug) {
       dd($this);
     }
 
@@ -139,9 +120,7 @@ class BaseTableController extends Controller
   {
     $newRow = array();
 
-    foreach($row as $key => $item)
-    {
-      dd($row);
+    foreach($row as $key => $item) {
       $newRow[$this->header[$key]['name']] = $item;
     }
 
@@ -150,79 +129,64 @@ class BaseTableController extends Controller
 
   /**
    * Table arguments
-   *
-   * @return array
    */
   protected static function GetFilterArgs(): array
   {
-    $url_args = array();
+    $urlArgs = array();
 
-    foreach(explode('&', request()->getQueryString()) as $item)
-    {
-      if($item === 'debug=')
-      {
+    foreach(explode('&', request()->getQueryString()) as $item) {
+      if($item === 'debug=') {
         self::$debug = true;
       }
 
       $param = explode('=', $item);
-      if(count($param))
-      {
-        if(isset($param[1]))
-        {
-          $url_args[$param[0]] = urldecode($param[1]);
+      if(count($param)) {
+        if(isset($param[1])) {
+          $urlArgs[$param[0]] = urldecode($param[1]);
         }
       }
     }
 
-    return $url_args;
+    return $urlArgs;
   }
 
   /**
    * Определение типа и направление сортировки.
    * Сортировка только по полям, которые есть в модели, остальные игнорируются
-   *
-   * @param $query
    */
   private function tableSort(&$query)
   {
-    $field_name = 'id';
-    // Base parametrise
+    $fieldName = 'id';
     $sort = 'asc';
 
-    foreach(explode('&', request()->getQueryString()) as $item)
-    {
-      if(!$item)
-      {
+    foreach(explode('&', request()->getQueryString()) as $item) {
+      if(!$item) {
         continue;
       }
 
       $param = explode('=', $item);
+
       $key = $param[0];
       $value = $param[1];
 
-      if($key === 'sort' && ($value === 'asc' || $value === 'desc'))
-      {
+      if($key === 'sort' && ($value === 'asc' || $value === 'desc')) {
         $sort = $value;
       }
-      elseif($key === 'field' && $value)
-      {
-        $field_name = $value;
+      elseif($key === 'field' && !empty($value)) {
+        $fieldName = $value;
       }
     }
-    $query->orderBy($field_name, $sort);
+
+    $query->orderBy($fieldName, $sort);
   }
 
   /**
    * Количество строк на странице
-   *
-   * @param array $filter
-   * @return int
    */
   protected static function colInPage(array $filter): int
   {
     $cnt = 15;
-    if(isset($filter['per_page']) && (int)$filter['per_page'])
-    {
+    if(!empty($filter['per_page']) && (int)$filter['per_page']) {
       $cnt = (int)$filter['per_page'];
     }
 
@@ -231,10 +195,8 @@ class BaseTableController extends Controller
 
   /**
    * Рендерит таблицу с фильтром
-   *
-   * @return array|string
    */
-  public function render()
+  public function render(): string
   {
     $out = array(
       'form'      => $this->form,
@@ -242,15 +204,14 @@ class BaseTableController extends Controller
       'mr_object' => array(),
     );
 
-    if($this->body)
-    {
+    if($this->body) {
       $out['mr_object'] = array(
         'header'        => $this->header,
         'body'          => $this->body,
         'count'         => $this->count,
-        'btn_selected'  => $this->btn_selected,
+        'btn_selected'  => $this->btnSelected,
         'result'        => $this->result,
-        'is_checkboxes' => $this->is_checkboxes,
+        'is_checkboxes' => $this->isCheckboxes,
         'route_url'     => $this->route_url,
       );
     }
@@ -260,18 +221,26 @@ class BaseTableController extends Controller
 
   /**
    * Возвращает массив данных объекта
-   *
-   * @return array
    */
+  #[ArrayShape([
+    'header'        => "",
+    'body'          => "",
+    'count'         => "int",
+    'btn_selected'  => "",
+    'result'        => "",
+    'is_checkboxes' => "bool",
+    'route_url'     => "string",
+    'form'          => "mixed"
+  ])]
   public function getTableData(): array
   {
     return array(
       'header'        => $this->header,
       'body'          => $this->body,
       'count'         => $this->count,
-      'btn_selected'  => $this->btn_selected,
+      'btn_selected'  => $this->btnSelected,
       'result'        => $this->result,
-      'is_checkboxes' => $this->is_checkboxes,
+      'is_checkboxes' => $this->isCheckboxes,
       'route_url'     => $this->route_url,
       'form'          => $this->form,
     );
@@ -279,23 +248,30 @@ class BaseTableController extends Controller
 
   /**
    * Return response for REST API (draft)
-   *
-   * @return array
    */
+  #[ArrayShape([
+    'header'       => "",
+    'total'        => "mixed",
+    'totalDisplay' => "string",
+    'data'         => "array",
+    'current_page' => "mixed",
+    'last_page'    => "mixed",
+    'per_page'     => "mixed",
+    'form'         => "mixed"
+  ])]
   public function getFrontEndData(): array
   {
     $out = array(
       'header'       => $this->header,
       'total'        => $this->body->total(),
       'totalDisplay' => MtFloatHelper::formatCommon($this->body->total(), 0),
-      'data'         => $this->front_rows,
+      'data'         => $this->frontRows,
       'current_page' => $this->body->currentPage(),
       'last_page'    => $this->body->lastPage(),
       'per_page'     => $this->body->perPage(),
     );
 
-    if($this->form)
-    {
+    if($this->form) {
       $out['form'] = $this->form;
     }
 
@@ -304,16 +280,13 @@ class BaseTableController extends Controller
 
   /**
    * Вернёт SQL запрос для построения таблицы
-   *
-   * @param array $args
-   * @return Builder
    */
   public function getTableRequest(array $args = array())
   {
     $args += $this->request;
 
     /** @var Builder $query */
-    $query = $this->GetQuery($this->filter_args, $args);
+    $query = $this->GetQuery($this->filterArgs, $args);
     $this->tableSort($query);
 
     return $query;
@@ -332,8 +305,6 @@ class BaseTableController extends Controller
 
   /**
    * Cached dir tables
-   *
-   * @return array
    */
   private function getLocalDirs(): array
   {
@@ -341,8 +312,7 @@ class BaseTableController extends Controller
       $dir_list = scandir(__DIR__ . '/../');
       $unset = array('.', '..', 'BaseTableController');
 
-      foreach($unset as $e)
-      {
+      foreach($unset as $e) {
         unset($dir_list[array_search($e, $dir_list)]);
       }
 
@@ -357,23 +327,18 @@ class BaseTableController extends Controller
    */
   public function getTableClass(): array
   {
-    foreach($this->request as $key => $item)
-    {
-      if(strpos($key, 'TableController'))
-      {
+    foreach($this->request as $key => $item) {
+      if(strpos($key, 'TableController')) {
         $object = null;
         $localDirs = $this->getLocalDirs();
-        foreach($localDirs as $has_dir)
-        {
-          if(class_exists(self::TABLE_DIR . $has_dir . '\\' . $key, true))
-          {
+        foreach($localDirs as $has_dir) {
+          if(class_exists(self::TABLE_DIR . $has_dir . '\\' . $key, true)) {
             $object = self::TABLE_DIR . $has_dir . '\\' . $key;
             break;
           }
         }
 
-        if($object)
-        {
+        if($object) {
           $r = new $object();
 
           return $r->buildTable()->getTableData();
@@ -382,12 +347,10 @@ class BaseTableController extends Controller
     }
 
     /// Draft version for REST API app
-    if($this->request['table'] ?? null)
-    {
+    if($this->request['table'] ?? null) {
       self::$isFrontEnd = true;
 
-      if($this->tables[$this->request['table']] ?? null)
-      {
+      if($this->tables[$this->request['table']] ?? null) {
         $object = $this->tables[$this->request['table']];
 
         $r = new $object();

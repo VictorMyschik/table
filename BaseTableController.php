@@ -10,7 +10,7 @@ use JetBrains\PhpStorm\ArrayShape;
 
 class BaseTableController extends Controller
 {
-  const TABLE_DIR = "App\\Http\\Controllers\\TableControllers\\";
+  const TABLE_DIR = "App\\Http\\Controllers\\TableControllers";
 
   protected string $routeName = 'base_table';
   protected array $request;
@@ -303,27 +303,44 @@ class BaseTableController extends Controller
     'officeGoods'          => self::TABLE_DIR . "Office\\MrOfficeGoodTableController",
   );
 
+  private function DirFilesR($dir)
+  {
+    $handle = opendir($dir) or die("Can't open directory $dir");
+    $files = array();
+    while(false !== ($file = readdir($handle))) {
+      if($file != "." && $file != "..") {
+        if(is_dir($dir . "/" . $file)) {
+          $subfiles = $this->DirFilesR($dir . "/" . $file);
+          $files = array_merge($files, $subfiles);
+        }
+        else {
+          $files[] = $dir . "/" . $file;
+        }
+      }
+    }
+    closedir($handle);
+
+    return $files;
+  }
+
   /**
    * Cached dir tables
    */
   private function getLocalDirs(): array
   {
     return MrCacheHelper::getCachedData('LocalDirs_TableControllers', function() {
-      $dir_list = scandir(__DIR__ . '/../');
-      $unset = array('.', '..', 'BaseTableController');
+      $dir = __DIR__ . '/..';
+      $list = $this->DirFilesR($dir);
+      array_walk($list, function(&$item) use ($dir) {
+        $item = str_replace($dir, '', $item);
+      });
 
-      foreach($unset as $e) {
-        unset($dir_list[array_search($e, $dir_list)]);
-      }
-
-      return $dir_list;
+      return $list;
     });
   }
 
   /**
    * Определение нужной таблицы по внешнему запросу
-   *
-   * @return array
    */
   public function getTableClass(): array
   {
@@ -331,9 +348,16 @@ class BaseTableController extends Controller
       if(strpos($key, 'TableController')) {
         $object = null;
         $localDirs = $this->getLocalDirs();
-        foreach($localDirs as $has_dir) {
-          if(class_exists(self::TABLE_DIR . $has_dir . '\\' . $key, true)) {
-            $object = self::TABLE_DIR . $has_dir . '\\' . $key;
+        foreach($localDirs as $hasDir) {
+          if(!stripos($hasDir, $key)) {
+            continue;
+          }
+
+          $hasDir = str_replace('/', "\\", $hasDir);
+          $hasDir = str_replace('.php', "", $hasDir);
+
+          if(class_exists(self::TABLE_DIR . $hasDir, true)) {
+            $object = self::TABLE_DIR . $hasDir;
             break;
           }
         }

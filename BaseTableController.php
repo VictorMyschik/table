@@ -27,9 +27,6 @@ class BaseTableController extends Controller
   private array $frontRows = [];
   private array $arguments = [];
 
-
-  private static bool $debug = false;
-
   public function __construct(bool $showStart = true)
   {
     $this->request = request()->all();
@@ -49,11 +46,12 @@ class BaseTableController extends Controller
     if(method_exists($this, 'getFilter')) {
       $this->form = $this->getFilter($this->filterArgs);
     }
-  }
 
-  public function returnInputData(): array
-  {
-    return $this->request;
+    // Table header
+    if(method_exists($this, 'getHeader')) {
+      $this->header = $this::getHeader();
+      $this->addCheckboxColumn();
+    }
   }
 
   public function buildTable(array $args = array()): static
@@ -76,34 +74,20 @@ class BaseTableController extends Controller
     $pageNumber = $this->request['page'] ?? 1;
 
     $data = $this->GetTableRequest($args)->paginate(self::colInPage($this->filterArgs), ['id'], 'page', $pageNumber);
-    // Table header
-    $header = $this::getHeader();
-    $this->isCheckboxes = false;
-    if(count($header)) {
-      foreach($header as $head_arr) {
-        if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox') {
-          $this->isCheckboxes = true;
-        }
-      }
-    }
-
-    $this->header = $header;
-
     $collections = $data->getCollection();
 
-    $this->rows = array();
+    $rows = array();
 
     foreach($collections as $model) {
-      $this->rows[] = $row = $this->buildRow($model->id, $args);
+      $rows[] = $row = $this->buildRow($model->id, $args);
       if(self::$isFrontEnd) {
-
         $this->frontRows[] = $row;
       }
 
-      $data->setCollection(collect($this->rows));
+      $data->setCollection(collect($rows));
     }
 
-    $this->body = $data ?? null;
+    $this->body = $data;
     $this->count = $data->total();
 
 
@@ -113,15 +97,16 @@ class BaseTableController extends Controller
     return $this;
   }
 
-  private function convertToApi(array $row): array
+  private function addCheckboxColumn(): void
   {
-    $newRow = array();
+    $this->isCheckboxes = false;
 
-    foreach($row as $key => $item) {
-      $newRow[$this->header[$key]['name']] = $item;
+    foreach($this->header as $head_arr) {
+      if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox') {
+        $this->isCheckboxes = true;
+        break;
+      }
     }
-
-    return $newRow;
   }
 
   /**
@@ -132,10 +117,6 @@ class BaseTableController extends Controller
     $urlArgs = array();
 
     foreach(explode('&', request()->getQueryString()) as $item) {
-      if($item === 'debug=') {
-        self::$debug = true;
-      }
-
       $param = explode('=', $item);
       if(count($param)) {
         if(isset($param[1])) {
@@ -198,21 +179,18 @@ class BaseTableController extends Controller
     $out = array(
       'form'      => $this->form,
       'route_url' => $this->route_url,
-      'mr_object' => array(),
     );
 
-    if($this->body) {
-      $out['mr_object'] = array(
-        'header'        => $this->header,
-        'body'          => $this->body,
-        'count'         => $this->count,
-        'btn_selected'  => $this->btnSelected,
-        'result'        => $this->result,
-        'is_checkboxes' => $this->isCheckboxes,
-        'route_url'     => $this->route_url,
-        'arguments'     => $this->arguments
-      );
-    }
+    $out['mr_object'] = array(
+      'header'        => $this->header,
+      'body'          => $this->body,
+      'count'         => $this->count,
+      'btn_selected'  => $this->btnSelected,
+      'result'        => $this->result,
+      'is_checkboxes' => $this->isCheckboxes,
+      'route_url'     => $this->route_url,
+      'arguments'     => $this->arguments
+    );
 
     return View('layouts.Elements.mr_table')->with($out)->toHtml();
   }
@@ -260,13 +238,14 @@ class BaseTableController extends Controller
   public function getFrontEndData(): array
   {
     $out = array(
-      'header'       => $this->header,
-      'total'        => $this->body->total(),
-      'totalDisplay' => MtFloatHelper::formatCommon($this->body->total(), 0),
-      'data'         => $this->frontRows,
-      'current_page' => $this->body->currentPage(),
-      'last_page'    => $this->body->lastPage(),
-      'per_page'     => $this->body->perPage(),
+      'header'        => $this->header,
+      'total'         => $this->body->total(),
+      'totalDisplay'  => MtFloatHelper::formatCommon($this->body->total(), 0),
+      'data'          => $this->frontRows,
+      'current_page'  => $this->body->currentPage(),
+      'last_page'     => $this->body->lastPage(),
+      'per_page'      => $this->body->perPage(),
+      'is_checkboxes' => $this->isCheckboxes,
     );
 
     if($this->form) {

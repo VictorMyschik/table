@@ -5,7 +5,6 @@ namespace App\Http\Controllers\TableControllers\BaseTableController;
 use App\Helpers\System\MrCacheHelper;
 use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
-use Illuminate\Database\Query\Builder;
 use JetBrains\PhpStorm\ArrayShape;
 
 class BaseTableController extends Controller
@@ -26,6 +25,7 @@ class BaseTableController extends Controller
   protected static bool $isFrontEnd = false;
   private array $rows;
   private array $frontRows = [];
+  private array $arguments = [];
 
 
   private static bool $debug = false;
@@ -58,6 +58,7 @@ class BaseTableController extends Controller
 
   public function buildTable(array $args = array()): static
   {
+    $this->arguments = $args;
     // Checkboxes Selected
     $result = '';
     if(isset(request()['method'])) {
@@ -94,8 +95,8 @@ class BaseTableController extends Controller
 
     foreach($collections as $model) {
       $this->rows[] = $row = $this->buildRow($model->id, $args);
-
       if(self::$isFrontEnd) {
+
         $this->frontRows[] = $row;
       }
 
@@ -108,10 +109,6 @@ class BaseTableController extends Controller
 
     $this->result = $result;
     $this->form = $filter ?? null;
-
-    if(self::$debug) {
-      dd($this);
-    }
 
     return $this;
   }
@@ -213,6 +210,7 @@ class BaseTableController extends Controller
         'result'        => $this->result,
         'is_checkboxes' => $this->isCheckboxes,
         'route_url'     => $this->route_url,
+        'arguments'     => $this->arguments
       );
     }
 
@@ -285,33 +283,21 @@ class BaseTableController extends Controller
   {
     $args += $this->request;
 
-    /** @var Builder $query */
     $query = $this->GetQuery($this->filterArgs, $args);
     $this->tableSort($query);
 
     return $query;
   }
 
-  // TODO: change to magick method
-  private array $tables = array(
-    'currency'             => self::TABLE_DIR . "Reference\\MrReferenceCurrencyTableController",
-    'country'              => self::TABLE_DIR . "Reference\\MrReferenceCountryTableController",
-    'currency_rate'        => self::TABLE_DIR . "Reference\\MrReferenceCurrencyRateTableController",
-    'place'                => self::TABLE_DIR . "MrAdminPlaceTableController",
-    'price'                => self::TABLE_DIR . "Office\\MrPriceTableController",
-    'marketplaceGoodPrice' => self::TABLE_DIR . "Office\\MrMarketplaceGoodTableController",
-    'officeGoods'          => self::TABLE_DIR . "Office\\MrOfficeGoodTableController",
-  );
-
-  private function DirFilesR($dir)
+  private function dirFilesExists(string $dir): array
   {
     $handle = opendir($dir) or die("Can't open directory $dir");
     $files = array();
     while(false !== ($file = readdir($handle))) {
       if($file != "." && $file != "..") {
         if(is_dir($dir . "/" . $file)) {
-          $subfiles = $this->DirFilesR($dir . "/" . $file);
-          $files = array_merge($files, $subfiles);
+          $subFiles = $this->dirFilesExists($dir . "/" . $file);
+          $files = array_merge($files, $subFiles);
         }
         else {
           $files[] = $dir . "/" . $file;
@@ -330,7 +316,7 @@ class BaseTableController extends Controller
   {
     return MrCacheHelper::getCachedData('LocalDirs_TableControllers', function() {
       $dir = __DIR__ . '/..';
-      $list = $this->DirFilesR($dir);
+      $list = $this->dirFilesExists($dir);
       array_walk($list, function(&$item) use ($dir) {
         $item = str_replace($dir, '', $item);
       });
@@ -344,6 +330,10 @@ class BaseTableController extends Controller
    */
   public function getTableClass(): array
   {
+    if(isset($this->request['front'])) {
+      self::$isFrontEnd = true;
+    }
+
     foreach($this->request as $key => $item) {
       if(strpos($key, 'TableController')) {
         $object = null;
@@ -365,24 +355,15 @@ class BaseTableController extends Controller
         if($object) {
           $r = new $object();
 
-          return $r->buildTable()->getTableData();
+          if(self::$isFrontEnd) {
+            return $r->buildTable()->getFrontEndData();
+          }
+          else {
+            return $r->buildTable()->getTableData();
+          }
         }
       }
     }
-
-    /// Draft version for REST API app
-    if($this->request['table'] ?? null) {
-      self::$isFrontEnd = true;
-
-      if($this->tables[$this->request['table']] ?? null) {
-        $object = $this->tables[$this->request['table']];
-
-        $r = new $object();
-
-        return $r->buildTable()->getFrontEndData();
-      }
-    }
-
 
     return ['Table not found'];
   }

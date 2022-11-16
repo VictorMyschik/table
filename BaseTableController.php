@@ -35,7 +35,7 @@ class BaseTableController extends Controller
     $arr = array_pop($arr);
 
     $param = '?' . $arr . '&';
-    foreach($this->request as $key => $value) {
+    foreach ($this->request as $key => $value) {
       $param .= $key . '=' . $value;
     }
 
@@ -43,12 +43,12 @@ class BaseTableController extends Controller
 
     // Table filter
     $this->filterArgs = self::GetFilterArgs();
-    if(method_exists($this, 'getFilter')) {
+    if (method_exists($this, 'getFilter')) {
       $this->form = $this->getFilter($this->filterArgs);
     }
 
     // Table header
-    if(method_exists($this, 'getHeader')) {
+    if (method_exists($this, 'getHeader')) {
       $this->header = $this::getHeader();
       $this->addCheckboxColumn();
     }
@@ -59,7 +59,7 @@ class BaseTableController extends Controller
     $this->arguments = $args;
     // Checkboxes Selected
     $result = '';
-    if(isset(request()['method'])) {
+    if (isset(request()['method'])) {
       $methodNameForSelected = request()['method'];
 
       return $this->$methodNameForSelected($this->request['selected']);
@@ -67,7 +67,7 @@ class BaseTableController extends Controller
 
     // Btn Selected
     $this->btnSelected = array();
-    if(method_exists($this, 'Selected')) {
+    if (method_exists($this, 'Selected')) {
       $this->btnSelected = $this->Selected();
     }
 
@@ -78,9 +78,9 @@ class BaseTableController extends Controller
 
     $rows = array();
 
-    foreach($collections as $model) {
+    foreach ($collections as $model) {
       $rows[] = $row = $this->buildRow($model->id, $args);
-      if(self::$isFrontEnd) {
+      if (self::$isFrontEnd) {
         $this->frontRows[] = $row;
       }
 
@@ -101,8 +101,8 @@ class BaseTableController extends Controller
   {
     $this->isCheckboxes = false;
 
-    foreach($this->header as $head_arr) {
-      if(isset($head_arr['name']) && $head_arr['name'] === '#checkbox') {
+    foreach ($this->header as $head_arr) {
+      if (isset($head_arr['name']) && $head_arr['name'] === '#checkbox') {
         $this->isCheckboxes = true;
         break;
       }
@@ -116,10 +116,10 @@ class BaseTableController extends Controller
   {
     $urlArgs = array();
 
-    foreach(explode('&', request()->getQueryString()) as $item) {
+    foreach (explode('&', request()->getQueryString()) as $item) {
       $param = explode('=', $item);
-      if(count($param)) {
-        if(isset($param[1])) {
+      if (count($param)) {
+        if (isset($param[1])) {
           $urlArgs[$param[0]] = urldecode($param[1]);
         }
       }
@@ -137,8 +137,8 @@ class BaseTableController extends Controller
     $fieldName = 'id';
     $sort = 'asc';
 
-    foreach(explode('&', request()->getQueryString()) as $item) {
-      if(!$item) {
+    foreach (explode('&', request()->getQueryString()) as $item) {
+      if (!$item) {
         continue;
       }
 
@@ -147,10 +147,9 @@ class BaseTableController extends Controller
       $key = $param[0];
       $value = $param[1];
 
-      if($key === 'sort' && ($value === 'asc' || $value === 'desc')) {
+      if ($key === 'sort' && ($value === 'asc' || $value === 'desc')) {
         $sort = $value;
-      }
-      elseif($key === 'field' && !empty($value)) {
+      } elseif ($key === 'field' && !empty($value)) {
         $fieldName = $value;
       }
     }
@@ -164,7 +163,7 @@ class BaseTableController extends Controller
   protected static function colInPage(array $filter): int
   {
     $cnt = 15;
-    if(!empty($filter['per_page']) && (int)$filter['per_page']) {
+    if (!empty($filter['per_page']) && (int)$filter['per_page']) {
       $cnt = (int)$filter['per_page'];
     }
 
@@ -248,7 +247,7 @@ class BaseTableController extends Controller
       'is_checkboxes' => $this->isCheckboxes,
     );
 
-    if($this->form) {
+    if ($this->form) {
       $out['form'] = $this->form;
     }
 
@@ -272,13 +271,12 @@ class BaseTableController extends Controller
   {
     $handle = opendir($dir) or die("Can't open directory $dir");
     $files = array();
-    while(false !== ($file = readdir($handle))) {
-      if($file != "." && $file != "..") {
-        if(is_dir($dir . "/" . $file)) {
+    while (false !== ($file = readdir($handle))) {
+      if ($file != "." && $file != "..") {
+        if (is_dir($dir . "/" . $file)) {
           $subFiles = $this->dirFilesExists($dir . "/" . $file);
           $files = array_merge($files, $subFiles);
-        }
-        else {
+        } else {
           $files[] = $dir . "/" . $file;
         }
       }
@@ -293,10 +291,10 @@ class BaseTableController extends Controller
    */
   private function getLocalDirs(): array
   {
-    return MrCacheHelper::getCachedData('LocalDirs_TableControllers', function() {
+    return MrCacheHelper::getCachedData('LocalDirs_TableControllers', function () {
       $dir = __DIR__ . '/..';
       $list = $this->dirFilesExists($dir);
-      array_walk($list, function(&$item) use ($dir) {
+      array_walk($list, function (&$item) use ($dir) {
         $item = str_replace($dir, '', $item);
       });
 
@@ -309,35 +307,34 @@ class BaseTableController extends Controller
    */
   public function getTableClass(): array
   {
-    if(isset($this->request['front'])) {
+    if (isset($this->request['front'])) {
       self::$isFrontEnd = true;
     }
 
-    foreach($this->request as $key => $item) {
-      if(strpos($key, 'TableController')) {
+    foreach ($this->request as $key => $item) {
+      if (strpos($key, 'TableController')) {
         $object = null;
         $localDirs = $this->getLocalDirs();
-        foreach($localDirs as $hasDir) {
-          if(!stripos($hasDir, $key)) {
+        foreach ($localDirs as $hasDir) {
+          if (!stripos($hasDir, $key)) {
             continue;
           }
 
           $hasDir = str_replace('/', "\\", $hasDir);
           $hasDir = str_replace('.php', "", $hasDir);
 
-          if(class_exists(self::TABLE_DIR . $hasDir, true)) {
+          if (class_exists(self::TABLE_DIR . $hasDir, true)) {
             $object = self::TABLE_DIR . $hasDir;
             break;
           }
         }
 
-        if($object) {
+        if ($object) {
           $r = new $object();
 
-          if(self::$isFrontEnd) {
+          if (self::$isFrontEnd) {
             return $r->buildTable()->getFrontEndData();
-          }
-          else {
+          } else {
             return $r->buildTable()->getTableData();
           }
         }

@@ -36,7 +36,9 @@ class BaseTableController extends Controller
 
     $param = '?' . $arr . '&';
     foreach ($this->request as $key => $value) {
-      $param .= $key . '=' . $value;
+      if (!is_array($value)) {
+        $param .= $key . '=' . $value;
+      }
     }
 
     $this->route_url = route($this->routeName) . $param;

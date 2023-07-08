@@ -242,7 +242,7 @@ class BaseTableController extends Controller
   {
     $args += $this->request;
 
-    $query = $this->GetQuery($this->filterArgs, $args);
+    $query = $this->getQuery($this->filterArgs, $args);
     $this->tableSort($query);
 
     return $query;

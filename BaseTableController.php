@@ -5,6 +5,7 @@ namespace App\Http\Controllers\TableControllers\BaseTableController;
 use App\Helpers\System\MrCacheHelper;
 use App\Helpers\System\MtFloatHelper;
 use App\Http\Controllers\Controller;
+use JetBrains\PhpStorm\ArrayShape;
 
 class BaseTableController extends Controller
 {
@@ -198,6 +199,16 @@ class BaseTableController extends Controller
   /**
    * Возвращает массив данных объекта
    */
+  #[ArrayShape([
+    'header'        => "",
+    'body'          => "",
+    'count'         => "int",
+    'btn_selected'  => "",
+    'result'        => "",
+    'is_checkboxes' => "bool",
+    'route_url'     => "string",
+    'form'          => "mixed"
+  ])]
   public function getTableData(): array
   {
     return array(
@@ -215,6 +226,16 @@ class BaseTableController extends Controller
   /**
    * Return response for REST API (draft)
    */
+  #[ArrayShape([
+    'header'       => "",
+    'total'        => "mixed",
+    'totalDisplay' => "string",
+    'data'         => "array",
+    'current_page' => "mixed",
+    'last_page'    => "mixed",
+    'per_page'     => "mixed",
+    'form'         => "mixed"
+  ])]
   public function getFrontEndData(): array
   {
     $out = array(
@@ -242,7 +263,7 @@ class BaseTableController extends Controller
   {
     $args += $this->request;
 
-    $query = $this->getQuery($this->filterArgs, $args);
+    $query = $this->GetQuery($this->filterArgs, $args);
     $this->tableSort($query);
 
     return $query;
